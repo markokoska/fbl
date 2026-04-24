@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="#fff" stroke="#ED1C24" stroke-width="4"/>
+  <text x="50" y="45" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#ED1C24" text-anchor="middle">1. FC</text>
+  <text x="50" y="68" font-family="Arial,sans-serif" font-size="22" font-weight="bold" fill="#ED1C24" text-anchor="middle">KÖLN</text>
+</svg>

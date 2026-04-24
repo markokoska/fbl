@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "C:/Program Files/dotnet/dotnet.exe",
+      "runtimeArgs": ["backend/FBL.Api/bin/Debug/net8.0/FBL.Api.dll", "--urls", "http://localhost:5000", "--contentRoot", "C:/Users/Markt/OneDrive/Desktop/fbl/backend/FBL.Api"],
+      "port": 5000
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
+      "runtimeArgs": ["-e", "process.chdir('frontend'); require('child_process').execFileSync('node', ['node_modules/vite/bin/vite.js'], {stdio:'inherit'})"],
+      "port": 5173
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+@FBL.Api_HostAddress = http://localhost:5014
+
+GET {{FBL.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

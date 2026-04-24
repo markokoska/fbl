@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet new:*)",
+      "Bash(dotnet --version)",
+      "Bash(where dotnet:*)",
+      "Bash(\"/c/Program Files/dotnet/dotnet\" --list-sdks)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/dotnet:$PATH\")",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet build:*)",
+      "Bash(npm create:*)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(dotnet tool:*)",
+      "Bash(export PATH=\"$HOME/.dotnet/tools:$PATH\")",
+      "Bash(dotnet ef:*)",
+      "WebFetch(domain:api.openligadb.de)",
+      "Bash(export PATH=\"/c/Program Files/PostgreSQL/17/bin:$PATH\")",
+      "Bash(PGPASSWORD=marko2907struga psql -U postgres -h localhost -c \"CREATE DATABASE fbl;\")",
+      "Bash(export PATH=\"/c/Program Files/PostgreSQL/18/bin:$PATH\")",
+      "Bash(dotnet run:*)",
+      "Bash(curl -s http://localhost:5000/api/gameweek/current)",
+      "Bash(curl -s -X POST http://localhost:5000/api/admin/seed-admin)",
+      "Bash(curl -s http://localhost:5000/swagger/index.html)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(PGPASSWORD=marko2907struga psql -U postgres -d fbl -c \"DELETE FROM \"\"MatchEvents\"\"; DELETE FROM \"\"FantasyPicks\"\"; DELETE FROM \"\"BundesligaPlayers\"\"; SELECT COUNT\\(*\\) as remaining FROM \"\"BundesligaPlayers\"\";\")",
+      "Bash(PGPASSWORD=marko2907struga \"/c/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -d fbl -c \"DELETE FROM \"\"MatchEvents\"\"; DELETE FROM \"\"FantasyPicks\"\"; DELETE FROM \"\"BundesligaPlayers\"\"; SELECT COUNT\\(*\\) as remaining FROM \"\"BundesligaPlayers\"\";\")",
+      "Bash(xargs grep:*)",
+      "Bash(wc -l *.tsx)",
+      "Bash(taskkill //F //IM dotnet.exe)",
+      "Bash(powershell -Command \"Start-Sleep -Seconds 1\")",
+      "Bash(powershell -Command \"Start-Sleep -Seconds 2\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -First 1 LocalPort, State\")"
+    ]
+  }
+}
