@@ -1,8 +1,11 @@
 # Stage 1: Build React frontend
-FROM node:20-alpine AS frontend-build
+# Using full Debian-based node image (not alpine) — alpine misses glibc which
+# breaks several Vite/Tailwind native binaries.
+FROM node:20 AS frontend-build
 WORKDIR /frontend
 COPY frontend/package*.json ./
-RUN npm ci
+# `npm install` is more forgiving than `npm ci` if the lockfile drifts at all.
+RUN npm install --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
