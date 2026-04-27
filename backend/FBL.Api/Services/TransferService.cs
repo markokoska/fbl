@@ -86,4 +86,41 @@ public class TransferService
             isFree ? "Transfer complete (free transfer)." : "Transfer complete (-4 point deduction).",
             team.Budget, team.FreeTransfers);
     }
+
+    /// <summary>
+    /// If the team has no picks for the target gameweek, copy the most recent
+    /// picks forward. Mirrors the helper in TeamController so transfers work
+    /// even if the team was created during a different (e.g. Live) gameweek.
+    /// </summary>
+    private async Task EnsurePicksForGameweek(int teamId, int targetGwId)
+    {
+        bool hasPicks = await _db.FantasyPicks
+            .AnyAsync(p => p.FantasyTeamId == teamId && p.GameweekId == targetGwId);
+        if (hasPicks) return;
+
+        var latestPick = await _db.FantasyPicks
+            .Where(p => p.FantasyTeamId == teamId)
+            .OrderByDescending(p => p.GameweekId)
+            .FirstOrDefaultAsync();
+        if (latestPick == null) return;
+
+        var sourcePicks = await _db.FantasyPicks
+            .Where(p => p.FantasyTeamId == teamId && p.GameweekId == latestPick.GameweekId)
+            .ToListAsync();
+
+        foreach (var pick in sourcePicks)
+        {
+            _db.FantasyPicks.Add(new FantasyPick
+            {
+                FantasyTeamId = teamId,
+                PlayerId = pick.PlayerId,
+                GameweekId = targetGwId,
+                SquadPosition = pick.SquadPosition,
+                IsCaptain = pick.IsCaptain,
+                IsViceCaptain = pick.IsViceCaptain
+            });
+        }
+
+        await _db.SaveChangesAsync();
+    }
 }
