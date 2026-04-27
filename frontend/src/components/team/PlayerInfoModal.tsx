@@ -190,7 +190,7 @@ export default function PlayerInfoModal({ playerId, onClose }: Props) {
         {/* History / Fixtures content */}
         <div className="mx-4 mt-3 mb-4">
           {tab === 'history' ? (
-            <HistoryTable history={player.gameweekHistory} fixtures={fixtures} team={player.team} isGk={isGk} />
+            <HistoryTable history={player.gameweekHistory} fixtures={fixtures} team={player.team} />
           ) : (
             <FixturesTable fixtures={fixtures} team={player.team} />
           )}
@@ -233,11 +233,10 @@ function getOpponent(fixture: Fixture, team: string) {
   return { opp, venue, score, short: getTeamShort(opp) };
 }
 
-function HistoryTable({ history, fixtures, team, isGk }: {
+function HistoryTable({ history, fixtures, team }: {
   history: PlayerDetail['gameweekHistory'];
   fixtures: Fixture[];
   team: string;
-  isGk: boolean;
 }) {
   // Build a map of GW number → fixture for this team (finished only)
   const fixtureMap = new Map<number, Fixture>();
