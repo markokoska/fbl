@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('fbl_user');
+    const stored = sessionStorage.getItem('fbl_user');
     if (stored) {
       setUser(JSON.parse(stored));
     }
@@ -33,14 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleAuth = (data: AuthResponse) => {
-    localStorage.setItem('fbl_token', data.token);
+    sessionStorage.setItem('fbl_token', data.token);
     const u: AuthUser = {
       userId: data.userId,
       displayName: data.displayName,
       email: data.email,
       roles: data.roles,
     };
-    localStorage.setItem('fbl_user', JSON.stringify(u));
+    sessionStorage.setItem('fbl_user', JSON.stringify(u));
     setUser(u);
   };
 
@@ -55,8 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('fbl_token');
-    localStorage.removeItem('fbl_user');
+    sessionStorage.removeItem('fbl_token');
+    sessionStorage.removeItem('fbl_user');
     setUser(null);
   };
 

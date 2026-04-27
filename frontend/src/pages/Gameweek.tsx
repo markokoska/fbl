@@ -41,7 +41,7 @@ export default function GameweekPage() {
       });
 
       // Connect SignalR
-      const token = localStorage.getItem('fbl_token');
+      const token = sessionStorage.getItem('fbl_token');
       const connection = new signalR.HubConnectionBuilder()
         .withUrl(`/hubs/livescore?access_token=${token}`)
         .withAutomaticReconnect()

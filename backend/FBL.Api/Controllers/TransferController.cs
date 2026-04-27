@@ -25,11 +25,26 @@ public class TransferController : ControllerBase
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    [HttpPost]
-    public async Task<ActionResult<TransferResultDto>> MakeTransfer(MakeTransferDto dto)
+    private async Task<FantasyTeam?> ResolveTeam(int? leagueId)
     {
-        var team = await _db.FantasyTeams.FirstOrDefaultAsync(t => t.UserId == UserId);
+        if (leagueId == null)
+            return await _db.FantasyTeams.FirstOrDefaultAsync(t => t.UserId == UserId && t.LeagueId == null);
+        return await _db.FantasyTeams.FirstOrDefaultAsync(t => t.UserId == UserId && t.LeagueId == leagueId.Value);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<TransferResultDto>> MakeTransfer(MakeTransferDto dto, [FromQuery] int? leagueId = null)
+    {
+        var team = await ResolveTeam(leagueId);
         if (team == null) return NotFound("Team not found.");
+
+        // Draft league teams use waivers, not classic transfers.
+        if (team.LeagueId != null)
+        {
+            var league = await _db.Leagues.FindAsync(team.LeagueId.Value);
+            if (league?.Type == Models.LeagueType.Draft)
+                return BadRequest("Draft teams use waiver claims, not transfers.");
+        }
 
         var currentGw = await _db.Gameweeks
             .Where(g => g.Status == GameweekStatus.Upcoming)
@@ -46,9 +61,9 @@ public class TransferController : ControllerBase
     }
 
     [HttpGet("history")]
-    public async Task<ActionResult<List<object>>> GetTransferHistory()
+    public async Task<ActionResult<List<object>>> GetTransferHistory([FromQuery] int? leagueId = null)
     {
-        var team = await _db.FantasyTeams.FirstOrDefaultAsync(t => t.UserId == UserId);
+        var team = await ResolveTeam(leagueId);
         if (team == null) return NotFound();
 
         var transfers = await _db.Transfers

@@ -37,3 +37,17 @@ public enum ChipType
     TripleCaptain,
     FreeHit
 }
+
+public enum LeagueType
+{
+    Global,
+    Classic,
+    Draft
+}
+
+public enum DraftStatus
+{
+    Pending,    // accepting members, draft hasn't started
+    InProgress, // live draft happening now
+    Completed   // draft done, season running
+}

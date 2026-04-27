@@ -10,6 +10,14 @@ public class FantasyTeam
     public string UserId { get; set; } = string.Empty;
     public AppUser User { get; set; } = null!;
 
+    /// <summary>
+    /// null = Global team (single team per user that competes on the global leaderboard).
+    /// Set = team belongs to a specific Classic or Draft league.
+    /// A user can have at most ONE team per LeagueId (and at most one global team).
+    /// </summary>
+    public int? LeagueId { get; set; }
+    public League? League { get; set; }
+
     [Required, MaxLength(50)]
     public string Name { get; set; } = string.Empty;
 

@@ -19,6 +19,11 @@ public class TransferService
         if (currentGw.IsLocked)
             return new TransferResultDto(false, "Gameweek is locked. Transfers are closed.", 0, 0);
 
+        // Ensure picks exist for the upcoming GW. If the team was created during a Live
+        // GW, its picks live on that older GW row — copy them forward so the transfer
+        // service can find the squad to mutate.
+        await EnsurePicksForGameweek(fantasyTeamId, currentGw.Id);
+
         var team = await _db.FantasyTeams
             .Include(t => t.Picks.Where(p => p.GameweekId == currentGw.Id))
             .ThenInclude(p => p.Player)

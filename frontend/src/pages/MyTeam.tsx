@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import type { Team, Gameweek, GameweekHistory, Pick } from '../api/types';
 import { useCountdown } from '../hooks/useCountdown';
+import { useLeagueId, leagueQuery } from '../hooks/useLeagueId';
 import PitchView, { type Formation } from '../components/team/PitchView';
+import TeamSelector from '../components/team/TeamSelector';
 
 export default function MyTeam() {
+  const leagueId = useLeagueId();
   const [team, setTeam] = useState<Team | null>(null);
   const [gw, setGw] = useState<Gameweek | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,18 +20,24 @@ export default function MyTeam() {
   const countdown = useCountdown(gw?.deadline);
 
   useEffect(() => {
+    setLoading(true);
+    setError('');
+    setTeam(null);
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId]);
 
   const loadData = async () => {
     try {
       const [teamRes, gwRes] = await Promise.all([
-        api.get<Team>('/team'),
+        api.get<Team>(`/team${leagueQuery(leagueId)}`),
         api.get<Gameweek>('/gameweek/current'),
       ]);
       setTeam(teamRes.data);
       setGw(gwRes.data);
-      api.get<GameweekHistory[]>('/team/history').then(r => setHistory(r.data)).catch(() => {});
+      api.get<GameweekHistory[]>(`/team/history${leagueQuery(leagueId)}`)
+        .then(r => setHistory(r.data))
+        .catch(() => setHistory([]));
     } catch (err: any) {
       if (err.response?.status === 404) {
         setError('no-team');
@@ -42,7 +51,7 @@ export default function MyTeam() {
 
   const openGwView = async (gwNumber: number) => {
     try {
-      const res = await api.get<Team>(`/team/gameweek/${gwNumber}`);
+      const res = await api.get<Team>(`/team/gameweek/${gwNumber}${leagueQuery(leagueId)}`);
       setViewGw({ gwNumber, team: res.data });
     } catch { /* ignore */ }
   };
@@ -50,12 +59,15 @@ export default function MyTeam() {
   if (loading) return <div className="text-center py-16 text-slate-400">Loading...</div>;
 
   if (error === 'no-team') {
+    const isLeague = leagueId != null;
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">Create Your Squad</h1>
+        <h1 className="text-3xl font-bold text-white mb-4">
+          {isLeague ? 'Create Your Team for This League' : 'Create Your Squad'}
+        </h1>
         <p className="text-slate-400 mb-8">Pick 15 players to start your Fantasy Bundesliga journey</p>
         <Link
-          to="/transfers"
+          to={`/transfers${leagueQuery(leagueId)}`}
           className="inline-block bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-8 py-3 rounded-lg transition"
         >
           Pick Your Team
@@ -68,10 +80,22 @@ export default function MyTeam() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {/* Team selector — only renders if user has multiple teams */}
+      <div className="flex justify-end mb-3">
+        <TeamSelector current={leagueId} />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{team.name}</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {team.name}
+            {team.leagueName && team.leagueId != null && (
+              <span className="ml-2 text-xs uppercase tracking-wide bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
+                {team.leagueName}
+              </span>
+            )}
+          </h1>
           <p className="text-slate-400 text-sm">
             Budget: <span className="text-emerald-400">{team.budget.toFixed(1)}M</span> | Free Transfers:{' '}
             <span className="text-emerald-400">{team.freeTransfers}</span>
@@ -102,6 +126,7 @@ export default function MyTeam() {
         formation={formation}
         onFormationChange={setFormation}
         onPicksUpdated={(newPicks) => setTeam({ ...team, picks: newPicks })}
+        leagueId={leagueId}
       />
 
       {/* GW History */}

@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
 import api from '../api/client';
-import { GameweekStatus, type League, type LeagueStanding, type Team, type Gameweek as GwType, type GameweekHistory } from '../api/types';
+import { GameweekStatus, LeagueType, type League, type LeagueStanding, type Team, type Gameweek as GwType, type GameweekHistory } from '../api/types';
 import PitchView, { type Formation } from '../components/team/PitchView';
 
 export default function Leagues() {
@@ -10,6 +11,8 @@ export default function Leagues() {
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newType, setNewType] = useState<LeagueType>(LeagueType.Classic);
+  const [newMaxMembers, setNewMaxMembers] = useState(8);
   const [joinCode, setJoinCode] = useState('');
   const [message, setMessage] = useState('');
   const [tab, setTab] = useState<'global' | 'my'>('global');
@@ -63,7 +66,7 @@ export default function Leagues() {
   }, [loadData]);
 
   useEffect(() => {
-    const token = localStorage.getItem('fbl_token');
+    const token = sessionStorage.getItem('fbl_token');
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`/hubs/livescore?access_token=${token}`)
       .withAutomaticReconnect()
@@ -78,8 +81,15 @@ export default function Leagues() {
   const createLeague = async () => {
     if (!newName.trim()) return;
     try {
-      await api.post('/league', { name: newName });
-      setNewName(''); setShowCreate(false); setMessage('League created!'); loadData();
+      await api.post('/league', {
+        name: newName,
+        type: newType,
+        maxMembers: newType === LeagueType.Draft ? newMaxMembers : 0,
+      });
+      setNewName('');
+      setShowCreate(false);
+      setMessage('League created!');
+      loadData();
     } catch (err: any) { setMessage(err.response?.data || 'Failed to create league'); }
   };
 
@@ -124,13 +134,52 @@ export default function Leagues() {
       </div>
 
       {showCreate && (
-        <div className="bg-slate-800 rounded-xl p-4 mb-6 flex gap-3">
-          <input
-            type="text" placeholder="League name..." value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm flex-1 focus:outline-none focus:border-emerald-400"
-          />
-          <button onClick={createLeague} className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Create</button>
+        <div className="bg-slate-800 rounded-xl p-4 mb-6 space-y-3">
+          <div className="flex gap-3">
+            <input
+              type="text" placeholder="League name..." value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm flex-1 focus:outline-none focus:border-emerald-400"
+            />
+            <button onClick={createLeague} className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">Create</button>
+          </div>
+
+          {/* Mode picker */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setNewType(LeagueType.Classic)}
+              className={`flex-1 text-left p-3 rounded-lg border-2 transition ${
+                newType === LeagueType.Classic
+                  ? 'border-emerald-400 bg-emerald-500/10'
+                  : 'border-slate-700 hover:border-slate-600'
+              }`}
+            >
+              <p className="text-white text-sm font-semibold">Classic League</p>
+              <p className="text-slate-400 text-xs mt-1">Each member builds their own squad. Compete on points.</p>
+            </button>
+            <button
+              onClick={() => setNewType(LeagueType.Draft)}
+              className={`flex-1 text-left p-3 rounded-lg border-2 transition ${
+                newType === LeagueType.Draft
+                  ? 'border-emerald-400 bg-emerald-500/10'
+                  : 'border-slate-700 hover:border-slate-600'
+              }`}
+            >
+              <p className="text-white text-sm font-semibold">Draft League</p>
+              <p className="text-slate-400 text-xs mt-1">Snake-draft players (each owned by one manager). Waivers between GWs.</p>
+            </button>
+          </div>
+
+          {newType === LeagueType.Draft && (
+            <div className="flex items-center gap-3 text-sm">
+              <label className="text-slate-400">Max managers:</label>
+              <input
+                type="number" min={2} max={20} value={newMaxMembers}
+                onChange={(e) => setNewMaxMembers(parseInt(e.target.value) || 8)}
+                className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-white w-20 focus:outline-none focus:border-emerald-400"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -165,8 +214,19 @@ export default function Leagues() {
                 className="bg-slate-800 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-slate-700/50 transition"
               >
                 <div>
-                  <p className="text-white font-medium">{league.name}</p>
-                  <p className="text-slate-400 text-xs">Code: {league.joinCode}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-medium">{league.name}</p>
+                    <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded font-bold ${
+                      league.type === LeagueType.Draft
+                        ? 'bg-purple-500/20 text-purple-300'
+                        : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {league.type === LeagueType.Draft ? 'Draft' : 'Classic'}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs">
+                    Code: {league.joinCode} &middot; {league.memberCount}{league.type === LeagueType.Draft ? `/${league.maxMembers}` : ''} members
+                  </p>
                 </div>
                 <span className="text-slate-500 text-sm">View &rsaquo;</span>
               </div>
@@ -182,11 +242,56 @@ export default function Leagues() {
           </button>
           <div className="mb-4 flex items-center gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-white">{selectedLeague.name}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-white">{selectedLeague.name}</h2>
+                <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded font-bold ${
+                  selectedLeague.type === LeagueType.Draft
+                    ? 'bg-purple-500/20 text-purple-300'
+                    : 'bg-emerald-500/20 text-emerald-300'
+                }`}>
+                  {selectedLeague.type === LeagueType.Draft ? 'Draft' : 'Classic'}
+                </span>
+              </div>
               <p className="text-slate-400 text-sm">Join code: <span className="text-emerald-400 font-mono">{selectedLeague.joinCode}</span></p>
             </div>
             {isLive && <LiveBadge />}
           </div>
+
+          {/* CTA: classic leagues — create or manage your team */}
+          {selectedLeague.type === LeagueType.Classic && (
+            <div className="bg-slate-800 rounded-xl p-4 mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-white text-sm font-medium">
+                  {selectedLeague.hasMyTeam ? 'Your team for this league' : 'You haven\'t built a team for this league yet'}
+                </p>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  {selectedLeague.hasMyTeam
+                    ? 'Manage picks, captain, and transfers for your league-specific squad.'
+                    : 'Pick 15 players to start competing in this league.'}
+                </p>
+              </div>
+              <Link
+                to={selectedLeague.hasMyTeam
+                  ? `/myteam?leagueId=${selectedLeague.id}`
+                  : `/transfers?leagueId=${selectedLeague.id}`}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap"
+              >
+                {selectedLeague.hasMyTeam ? 'Manage Team' : 'Create Team'}
+              </Link>
+            </div>
+          )}
+
+          {/* CTA: draft leagues — placeholder until draft mode is built */}
+          {selectedLeague.type === LeagueType.Draft && (
+            <div className="bg-slate-800 rounded-xl p-4 mb-4">
+              <p className="text-white text-sm font-medium">Draft League</p>
+              <p className="text-slate-400 text-xs mt-0.5">
+                {selectedLeague.memberCount}/{selectedLeague.maxMembers} managers joined.
+                Live drafting and waivers coming next.
+              </p>
+            </div>
+          )}
+
           <StandingsTable standings={selectedLeague.standings} title="" onViewTeam={viewUserTeam} isLive={isLive} />
         </div>
       )}

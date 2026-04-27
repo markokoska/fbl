@@ -18,15 +18,32 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<LeagueMember> LeagueMembers => Set<LeagueMember>();
     public DbSet<ChipUsage> ChipUsages => Set<ChipUsage>();
     public DbSet<Match> Matches => Set<Match>();
+    public DbSet<DraftPick> DraftPicks => Set<DraftPick>();
+    public DbSet<WaiverClaim> WaiverClaims => Set<WaiverClaim>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
+        // ---- User → FantasyTeams (1:N, was 1:1) ----
         builder.Entity<AppUser>()
-            .HasOne(u => u.FantasyTeam)
+            .HasMany(u => u.FantasyTeams)
             .WithOne(t => t.User)
-            .HasForeignKey<FantasyTeam>(t => t.UserId);
+            .HasForeignKey(t => t.UserId);
+
+        // ---- FantasyTeam → League (N:1, optional — null means Global team) ----
+        builder.Entity<FantasyTeam>()
+            .HasOne(t => t.League)
+            .WithMany(l => l.Teams)
+            .HasForeignKey(t => t.LeagueId)
+            .IsRequired(false);
+
+        // A user can have at most one team per league. (For LeagueId = NULL, Postgres
+        // treats NULLs as distinct so this won't enforce one-global-per-user — that's
+        // enforced in TeamController instead.)
+        builder.Entity<FantasyTeam>()
+            .HasIndex(t => new { t.UserId, t.LeagueId })
+            .IsUnique();
 
         builder.Entity<FantasyPick>()
             .HasOne(p => p.FantasyTeam)
@@ -90,8 +107,6 @@ public class AppDbContext : IdentityDbContext<AppUser>
             .Property(t => t.PriceOut)
             .HasPrecision(5, 1);
 
-        // Gameweek: store Deadline as a computed-like column, but since EF doesn't
-        // support computed from C# property, we store KickoffTime and Deadline is C#-only.
         builder.Entity<Match>()
             .HasOne(m => m.Gameweek)
             .WithMany()
@@ -100,5 +115,63 @@ public class AppDbContext : IdentityDbContext<AppUser>
         builder.Entity<Gameweek>()
             .Ignore(g => g.IsLocked)
             .Ignore(g => g.Deadline);
+
+        // ---- DraftPick: enforces one-owner-per-player within a draft league ----
+        builder.Entity<DraftPick>()
+            .HasOne(p => p.League)
+            .WithMany(l => l.DraftPicks)
+            .HasForeignKey(p => p.LeagueId);
+
+        builder.Entity<DraftPick>()
+            .HasOne(p => p.Player)
+            .WithMany()
+            .HasForeignKey(p => p.PlayerId);
+
+        builder.Entity<DraftPick>()
+            .HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserId);
+
+        // The critical constraint: a player can only be drafted once per league.
+        builder.Entity<DraftPick>()
+            .HasIndex(p => new { p.LeagueId, p.PlayerId })
+            .IsUnique();
+
+        // Each pick number is unique within a league (no two picks at slot #5).
+        builder.Entity<DraftPick>()
+            .HasIndex(p => new { p.LeagueId, p.PickNumber })
+            .IsUnique();
+
+        // ---- WaiverClaim ----
+        builder.Entity<WaiverClaim>()
+            .HasOne(c => c.League)
+            .WithMany()
+            .HasForeignKey(c => c.LeagueId);
+
+        builder.Entity<WaiverClaim>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId);
+
+        builder.Entity<WaiverClaim>()
+            .HasOne(c => c.Gameweek)
+            .WithMany()
+            .HasForeignKey(c => c.GameweekId);
+
+        builder.Entity<WaiverClaim>()
+            .HasOne(c => c.PlayerIn)
+            .WithMany()
+            .HasForeignKey(c => c.PlayerInId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<WaiverClaim>()
+            .HasOne(c => c.PlayerOut)
+            .WithMany()
+            .HasForeignKey(c => c.PlayerOutId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Index for fast queue lookups.
+        builder.Entity<WaiverClaim>()
+            .HasIndex(c => new { c.LeagueId, c.GameweekId, c.UserId, c.Priority });
     }
 }

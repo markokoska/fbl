@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '../api/client';
 import { PlayerPosition, type Player, type Team } from '../api/types';
 import { getTeamShort, getTeamDisplayName } from '../utils/teamAssets';
+import { useLeagueId, leagueQuery } from '../hooks/useLeagueId';
+import TeamSelector from '../components/team/TeamSelector';
 
 const posLabel = (p: PlayerPosition) => ['', 'GK', 'DEF', 'MID', 'FWD'][p];
 const posColor = (p: PlayerPosition) =>
@@ -15,6 +17,7 @@ const POS_LIMITS: Record<number, number> = {
 };
 
 export default function Transfers() {
+  const leagueId = useLeagueId();
   const [players, setPlayers] = useState<Player[]>([]);
   const [team, setTeam] = useState<Team | null>(null);
   const [search, setSearch] = useState('');
@@ -33,7 +36,8 @@ export default function Transfers() {
 
   useEffect(() => {
     loadData();
-  }, [search, posFilter, teamFilter, sortBy]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, posFilter, teamFilter, sortBy, leagueId]);
 
   const loadData = async () => {
     const params = new URLSearchParams();
@@ -51,7 +55,7 @@ export default function Transfers() {
     setTeams(teamsRes.data);
 
     try {
-      const teamRes = await api.get<Team>('/team');
+      const teamRes = await api.get<Team>(`/team${leagueQuery(leagueId)}`);
       setTeam(teamRes.data);
     } catch {
       setTeam(null);
@@ -105,12 +109,14 @@ export default function Transfers() {
       return;
     }
     try {
-      const res = await api.post('/transfer', { playerOutId: selectedOut, playerInId });
+      const res = await api.post(`/transfer${leagueQuery(leagueId)}`, { playerOutId: selectedOut, playerInId });
       setMessage(res.data.message);
       setSelectedOut(null);
       loadData();
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Transfer failed');
+      const data = err.response?.data;
+      const msg = typeof data === 'string' ? data : (data?.message || 'Transfer failed');
+      setMessage(msg);
     }
   };
 
@@ -168,7 +174,7 @@ export default function Transfers() {
     }
 
     try {
-      await api.post('/team', { teamName, picks });
+      await api.post(`/team${leagueQuery(leagueId)}`, { teamName, picks });
       setMessage('Team created!');
       setSelectedMap({});
       loadData();
@@ -183,9 +189,17 @@ export default function Transfers() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-white mb-2">
-        {isCreatingTeam ? 'Pick Your Squad' : 'Transfer Market'}
-      </h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-white">
+          {isCreatingTeam ? 'Pick Your Squad' : 'Transfer Market'}
+          {leagueId != null && (
+            <span className="ml-2 text-xs uppercase tracking-wide bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded align-middle">
+              League team
+            </span>
+          )}
+        </h1>
+        <TeamSelector current={leagueId} />
+      </div>
 
       {/* Squad creation panel */}
       {isCreatingTeam && (

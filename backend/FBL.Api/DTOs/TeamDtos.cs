@@ -22,7 +22,10 @@ public record TeamDto(
     int TotalPoints,
     int GameweekPoints,
     List<PickDetailDto> Picks,
-    ChipType? ActiveChip
+    ChipType? ActiveChip,
+    int? LeagueId,
+    string? LeagueName,
+    LeagueType? LeagueType
 );
 
 public record PickDetailDto(
@@ -46,4 +49,17 @@ public record GameweekHistoryDto(
     int Points,
     int CumulativePoints,
     int OverallRank
+);
+
+/// <summary>
+/// Summary entry returned by GET /api/team/mine for the team-switcher UI.
+/// </summary>
+public record MyTeamSummaryDto(
+    int TeamId,
+    string TeamName,
+    int? LeagueId,           // null = global team
+    string? LeagueName,      // "Global" or league name
+    LeagueType LeagueContext, // Global / Classic / Draft
+    int TotalPoints,
+    int GameweekPoints
 );
