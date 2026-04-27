@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import * as signalR from '@microsoft/signalr';
 import api from '../api/client';
-import { GameweekStatus, LeagueType, type League, type LeagueStanding, type Team, type Gameweek as GwType, type GameweekHistory } from '../api/types';
+import { GameweekStatus, LeagueType, type League, type LeagueStanding, type Team, type Gameweek as GwType } from '../api/types';
 import PitchView, { type Formation } from '../components/team/PitchView';
 
 export default function Leagues() {
@@ -16,8 +16,16 @@ export default function Leagues() {
   const [joinCode, setJoinCode] = useState('');
   const [message, setMessage] = useState('');
   const [tab, setTab] = useState<'global' | 'my'>('global');
-  const [viewingTeam, setViewingTeam] = useState<{ userId: string; managerName: string; teamName: string; history: GameweekHistory[] } | null>(null);
-  const [viewingGwTeam, setViewingGwTeam] = useState<{ gwNumber: number; team: Team } | null>(null);
+  const [viewingTeam, setViewingTeam] = useState<{
+    userId: string;
+    managerName: string;
+    teamName: string;
+    gwNumber: number;       // currently displayed GW
+    minGw: number;          // earliest available GW
+    maxGw: number;          // latest GW with picks (current GW)
+    team: Team;
+    loading: boolean;
+  } | null>(null);
   const [viewGwFormation, setViewGwFormation] = useState<Formation>('4-4-2');
   const [isLive, setIsLive] = useState(false);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
@@ -27,19 +35,47 @@ export default function Leagues() {
 
   const viewUserTeam = async (userId: string, managerName: string, teamName: string) => {
     try {
-      const histRes = await api.get<GameweekHistory[]>(`/team/user/${userId}/history`).catch(() => ({ data: [] as GameweekHistory[] }));
-      setViewingTeam({ userId, managerName, teamName, history: histRes.data });
-      setViewingGwTeam(null);
+      // Fetch the team for the current/upcoming GW (auto-creates picks if needed),
+      // plus the full GW list so we know the navigation bounds.
+      const [teamRes, gwsRes, currentGwRes] = await Promise.all([
+        api.get<Team>(`/team/user/${userId}`),
+        api.get<GwType[]>('/gameweek'),
+        api.get<GwType>('/gameweek/current').catch(() => null),
+      ]);
+
+      const allGws = gwsRes.data.sort((a, b) => a.number - b.number);
+      const currentNumber = currentGwRes?.data?.number
+        ?? allGws.find(g => g.status === GameweekStatus.Live)?.number
+        ?? allGws[allGws.length - 1]?.number
+        ?? 1;
+
+      setViewingTeam({
+        userId,
+        managerName,
+        teamName,
+        gwNumber: currentNumber,
+        minGw: allGws[0]?.number ?? 1,
+        maxGw: currentNumber,
+        team: teamRes.data,
+        loading: false,
+      });
     } catch {
       setMessage('Could not load team');
     }
   };
 
-  const openUserGwTeam = async (userId: string, gwNumber: number) => {
+  const navigateGw = async (delta: number) => {
+    if (!viewingTeam) return;
+    const next = viewingTeam.gwNumber + delta;
+    if (next < viewingTeam.minGw || next > viewingTeam.maxGw) return;
+
+    setViewingTeam({ ...viewingTeam, loading: true });
     try {
-      const res = await api.get<Team>(`/team/user/${userId}/gameweek/${gwNumber}`);
-      setViewingGwTeam({ gwNumber, team: res.data });
-    } catch { /* ignore */ }
+      const res = await api.get<Team>(`/team/user/${viewingTeam.userId}/gameweek/${next}`);
+      setViewingTeam(prev => prev ? { ...prev, gwNumber: next, team: res.data, loading: false } : null);
+    } catch {
+      setViewingTeam(prev => prev ? { ...prev, loading: false } : null);
+    }
   };
 
   const loadData = useCallback(async () => {
@@ -296,80 +332,64 @@ export default function Leagues() {
         </div>
       )}
 
-      {/* GW History Modal */}
+      {/* Team viewing modal: pitch view with GW navigation arrows */}
       {viewingTeam && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setViewingTeam(null)}>
-          <div className="bg-slate-900 rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-4 sm:p-6 border border-slate-700" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white">{viewingTeam.teamName}</h2>
-                <p className="text-slate-400 text-sm">{viewingTeam.managerName}</p>
-              </div>
-              <button onClick={() => setViewingTeam(null)} className="text-slate-400 hover:text-white text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-700 transition">&times;</button>
-            </div>
-
-            {viewingTeam.history.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">No gameweek history yet.</p>
-            ) : (
-              <div className="bg-slate-800 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-slate-500 text-xs uppercase border-b border-slate-700">
-                      <th className="text-left px-4 py-2">GW</th>
-                      <th className="text-right px-4 py-2">Pts</th>
-                      <th className="text-right px-4 py-2">Total</th>
-                      <th className="text-right px-4 py-2 w-16"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {viewingTeam.history.map(h => (
-                      <tr key={h.gameweekNumber} className="border-b border-slate-700/40 hover:bg-slate-700/30">
-                        <td className="px-4 py-2 text-white font-medium">GW{h.gameweekNumber}</td>
-                        <td className="px-4 py-2 text-right font-bold text-white tabular-nums">{h.points}</td>
-                        <td className="px-4 py-2 text-right text-slate-400 tabular-nums">{h.cumulativePoints}</td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            onClick={() => openUserGwTeam(viewingTeam.userId, h.gameweekNumber)}
-                            className="text-xs px-2.5 py-1 rounded font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white transition"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* GW Team Pitch Modal */}
-      {viewingGwTeam && viewingTeam && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setViewingGwTeam(null)}>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingTeam(null)}>
           <div className="bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 border border-slate-700" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-bold text-white">GW{viewingGwTeam.gwNumber} — {viewingTeam.teamName}</h2>
+                <h2 className="text-lg font-bold text-white">{viewingTeam.teamName}</h2>
                 <p className="text-slate-400 text-sm">
                   {viewingTeam.managerName} &middot;{' '}
-                  <span className="text-emerald-400 font-bold">{viewingGwTeam.team.gameweekPoints} pts</span>
+                  <span className="text-emerald-400 font-bold">
+                    {viewingTeam.team.gameweekPoints} pts
+                  </span>{' '}
+                  &middot; <span className="text-slate-300">{viewingTeam.team.totalPoints} total</span>
                 </p>
               </div>
               <button
-                onClick={() => setViewingGwTeam(null)}
+                onClick={() => setViewingTeam(null)}
                 className="text-slate-400 hover:text-white text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-700 transition"
               >
                 &times;
               </button>
             </div>
-            <PitchView
-              picks={viewingGwTeam.team.picks}
-              formation={viewGwFormation}
-              onFormationChange={setViewGwFormation}
-              readOnly
-            />
+
+            {/* GW navigation */}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <button
+                onClick={() => navigateGw(-1)}
+                disabled={viewingTeam.gwNumber <= viewingTeam.minGw || viewingTeam.loading}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition"
+                aria-label="Previous gameweek"
+              >
+                &lsaquo;
+              </button>
+              <span className="text-white text-sm font-semibold tabular-nums min-w-[60px] text-center">
+                {viewingTeam.loading ? '...' : `GW ${viewingTeam.gwNumber}`}
+              </span>
+              <button
+                onClick={() => navigateGw(1)}
+                disabled={viewingTeam.gwNumber >= viewingTeam.maxGw || viewingTeam.loading}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition"
+                aria-label="Next gameweek"
+              >
+                &rsaquo;
+              </button>
+            </div>
+
+            {/* Pitch */}
+            {viewingTeam.team.picks.length === 0 ? (
+              <p className="text-slate-500 text-center py-12">No squad set for this gameweek.</p>
+            ) : (
+              <PitchView
+                picks={viewingTeam.team.picks}
+                formation={viewGwFormation}
+                onFormationChange={setViewGwFormation}
+                readOnly
+              />
+            )}
           </div>
         </div>
       )}
