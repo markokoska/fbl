@@ -33,6 +33,8 @@ interface Props {
   onFormationChange: (f: Formation) => void;
   onPicksUpdated?: (picks: Pick[]) => void;
   readOnly?: boolean;
+  /** League context for the team being managed. null = global team. */
+  leagueId?: number | null;
 }
 
 type Mode = 'idle' | 'swap' | 'menu';
@@ -117,7 +119,8 @@ function BenchCard({ pick, selected, swapTarget, onClick }: {
   );
 }
 
-export default function PitchView({ picks, formation, onFormationChange, onPicksUpdated, readOnly }: Props) {
+export default function PitchView({ picks, formation, onFormationChange, onPicksUpdated, readOnly, leagueId }: Props) {
+  const leagueQs = leagueId == null ? '' : `?leagueId=${leagueId}`;
   const [mode, setMode] = useState<Mode>('idle');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [msg, setMsg] = useState('');
@@ -150,7 +153,7 @@ export default function PitchView({ picks, formation, onFormationChange, onPicks
   const savePicks = async (newPicks: Pick[]) => {
     setSaving(true);
     try {
-      await api.put('/team/picks', {
+      await api.put(`/team/picks${leagueQs}`, {
         picks: newPicks.map(p => ({
           playerId: p.playerId,
           squadPosition: p.squadPosition,

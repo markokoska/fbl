@@ -16,7 +16,9 @@ public class LeaderboardService
 
     public async Task<List<LeagueStandingDto>> GetGlobalLeaderboard(int page = 1, int pageSize = 50)
     {
+        // Global leaderboard: only teams with LeagueId == null (the user's "global" team).
         var standings = await _db.FantasyTeams
+            .Where(t => t.LeagueId == null)
             .Include(t => t.User)
             .OrderByDescending(t => t.TotalPoints + t.GameweekPoints)
             .Skip((page - 1) * pageSize)
@@ -36,21 +38,63 @@ public class LeaderboardService
 
     public async Task<List<LeagueStandingDto>> GetLeagueStandings(int leagueId)
     {
+        var league = await _db.Leagues.FindAsync(leagueId);
+        if (league == null) return new List<LeagueStandingDto>();
+
+        // Draft leagues: only count teams explicitly created for this league.
+        if (league.Type == LeagueType.Draft)
+        {
+            var draftTeams = await _db.FantasyTeams
+                .Where(t => t.LeagueId == leagueId)
+                .Include(t => t.User)
+                .OrderByDescending(t => t.TotalPoints + t.GameweekPoints)
+                .ToListAsync();
+
+            return draftTeams.Select((t, i) => new LeagueStandingDto(
+                i + 1,
+                t.UserId,
+                t.User.DisplayName,
+                t.Name,
+                t.TotalPoints + t.GameweekPoints,
+                t.GameweekPoints
+            )).ToList();
+        }
+
+        // Classic leagues: prefer the member's per-league team. If they haven't built
+        // one for this league yet, fall back to their global team so existing leagues
+        // that pre-date per-league teams still show meaningful standings.
         var members = await _db.LeagueMembers
             .Where(lm => lm.LeagueId == leagueId)
             .Include(lm => lm.User)
-            .ThenInclude(u => u.FantasyTeam)
-            .OrderByDescending(lm => (lm.User.FantasyTeam!.TotalPoints + lm.User.FantasyTeam.GameweekPoints))
             .ToListAsync();
 
-        return members.Select((m, i) => new LeagueStandingDto(
-            i + 1,
-            m.UserId,
-            m.User.DisplayName,
-            m.User.FantasyTeam?.Name ?? "No Team",
-            (m.User.FantasyTeam?.TotalPoints ?? 0) + (m.User.FantasyTeam?.GameweekPoints ?? 0),
-            m.User.FantasyTeam?.GameweekPoints ?? 0
-        )).ToList();
+        var userIds = members.Select(m => m.UserId).ToList();
+
+        var leagueSpecific = await _db.FantasyTeams
+            .Where(t => userIds.Contains(t.UserId) && t.LeagueId == leagueId)
+            .ToDictionaryAsync(t => t.UserId);
+
+        var globalTeams = await _db.FantasyTeams
+            .Where(t => userIds.Contains(t.UserId) && t.LeagueId == null)
+            .ToDictionaryAsync(t => t.UserId);
+
+        return members
+            .Select(m => new
+            {
+                Member = m,
+                Team = leagueSpecific.GetValueOrDefault(m.UserId)
+                       ?? globalTeams.GetValueOrDefault(m.UserId)
+            })
+            .OrderByDescending(x => (x.Team?.TotalPoints ?? 0) + (x.Team?.GameweekPoints ?? 0))
+            .Select((x, i) => new LeagueStandingDto(
+                i + 1,
+                x.Member.UserId,
+                x.Member.User.DisplayName,
+                x.Team?.Name ?? "No Team",
+                (x.Team?.TotalPoints ?? 0) + (x.Team?.GameweekPoints ?? 0),
+                x.Team?.GameweekPoints ?? 0
+            ))
+            .ToList();
     }
 
     /// <summary>

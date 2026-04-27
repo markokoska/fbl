@@ -21,6 +21,20 @@ export const ChipType = {
 } as const;
 export type ChipType = (typeof ChipType)[keyof typeof ChipType];
 
+export const LeagueType = {
+  Global: 0,
+  Classic: 1,
+  Draft: 2,
+} as const;
+export type LeagueType = (typeof LeagueType)[keyof typeof LeagueType];
+
+export const DraftStatus = {
+  Pending: 0,
+  InProgress: 1,
+  Completed: 2,
+} as const;
+export type DraftStatus = (typeof DraftStatus)[keyof typeof DraftStatus];
+
 export interface AuthResponse {
   token: string;
   refreshToken: string;
@@ -104,6 +118,20 @@ export interface Team {
   gameweekPoints: number;
   picks: Pick[];
   activeChip?: ChipType;
+  leagueId?: number | null;
+  leagueName?: string | null;
+  leagueType?: LeagueType | null;
+}
+
+/** Summary entry used by the team-switcher dropdown. */
+export interface MyTeamSummary {
+  teamId: number;
+  teamName: string;
+  leagueId: number | null;
+  leagueName: string;
+  leagueContext: LeagueType;
+  totalPoints: number;
+  gameweekPoints: number;
 }
 
 export interface Gameweek {
@@ -120,6 +148,11 @@ export interface League {
   name: string;
   joinCode: string;
   isGlobal: boolean;
+  type: LeagueType;
+  memberCount: number;
+  maxMembers: number;
+  draftStatus: DraftStatus;
+  hasMyTeam: boolean;
   standings: LeagueStanding[];
 }
 

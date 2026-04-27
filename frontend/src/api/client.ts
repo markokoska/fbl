@@ -5,7 +5,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('fbl_token');
+  const token = sessionStorage.getItem('fbl_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -16,8 +16,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('fbl_token');
-      localStorage.removeItem('fbl_user');
+      sessionStorage.removeItem('fbl_token');
+      sessionStorage.removeItem('fbl_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

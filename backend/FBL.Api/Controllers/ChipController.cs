@@ -21,13 +21,19 @@ public class ChipController : ControllerBase
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    [HttpGet("available")]
-    public async Task<ActionResult<object>> GetAvailableChips()
+    private async Task<FantasyTeam?> ResolveTeam(int? leagueId, bool includeChips = false)
     {
-        var team = await _db.FantasyTeams
-            .Include(t => t.ChipUsages)
-            .FirstOrDefaultAsync(t => t.UserId == UserId);
+        IQueryable<FantasyTeam> q = _db.FantasyTeams;
+        if (includeChips) q = q.Include(t => t.ChipUsages);
+        if (leagueId == null)
+            return await q.FirstOrDefaultAsync(t => t.UserId == UserId && t.LeagueId == null);
+        return await q.FirstOrDefaultAsync(t => t.UserId == UserId && t.LeagueId == leagueId.Value);
+    }
 
+    [HttpGet("available")]
+    public async Task<ActionResult<object>> GetAvailableChips([FromQuery] int? leagueId = null)
+    {
+        var team = await ResolveTeam(leagueId, includeChips: true);
         if (team == null) return NotFound();
 
         var usedChips = team.ChipUsages.Select(c => c.ChipType).ToList();
@@ -45,7 +51,7 @@ public class ChipController : ControllerBase
     }
 
     [HttpPost("activate")]
-    public async Task<ActionResult> ActivateChip([FromBody] ChipType chipType)
+    public async Task<ActionResult> ActivateChip([FromBody] ChipType chipType, [FromQuery] int? leagueId = null)
     {
         var currentGw = await _db.Gameweeks
             .Where(g => g.Status == GameweekStatus.Upcoming)
@@ -55,17 +61,12 @@ public class ChipController : ControllerBase
         if (currentGw == null) return BadRequest("No upcoming gameweek.");
         if (currentGw.IsLocked) return BadRequest("Gameweek is locked. Cannot activate chip.");
 
-        var team = await _db.FantasyTeams
-            .Include(t => t.ChipUsages)
-            .FirstOrDefaultAsync(t => t.UserId == UserId);
-
+        var team = await ResolveTeam(leagueId, includeChips: true);
         if (team == null) return NotFound();
 
-        // Check if chip already used this GW
         if (team.ChipUsages.Any(c => c.GameweekId == currentGw.Id))
             return BadRequest("You've already activated a chip this gameweek.");
 
-        // Check availability
         var usedChips = team.ChipUsages.Select(c => c.ChipType).ToList();
         if (chipType == ChipType.Wildcard && usedChips.Count(c => c == ChipType.Wildcard) >= 2)
             return BadRequest("Both wildcards used.");
@@ -84,7 +85,7 @@ public class ChipController : ControllerBase
     }
 
     [HttpDelete("deactivate")]
-    public async Task<ActionResult> DeactivateChip()
+    public async Task<ActionResult> DeactivateChip([FromQuery] int? leagueId = null)
     {
         var currentGw = await _db.Gameweeks
             .Where(g => g.Status == GameweekStatus.Upcoming)
@@ -94,7 +95,7 @@ public class ChipController : ControllerBase
         if (currentGw == null || currentGw.IsLocked)
             return BadRequest("Cannot deactivate chip.");
 
-        var team = await _db.FantasyTeams.FirstOrDefaultAsync(t => t.UserId == UserId);
+        var team = await ResolveTeam(leagueId);
         if (team == null) return NotFound();
 
         var chip = await _db.ChipUsages

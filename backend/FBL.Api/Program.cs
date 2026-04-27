@@ -28,7 +28,10 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 .AddDefaultTokenProviders();
 
 // JWT Auth
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "FBL_SuperSecret_Key_Change_In_Production_2024!";
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException(
+        "Jwt:Key is not configured. Set it in appsettings.Development.json (local) or as the Jwt__Key environment variable (production).");
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
