@@ -4,8 +4,9 @@
 FROM node:20 AS frontend-build
 WORKDIR /frontend
 COPY frontend/package*.json ./
-# `npm install` is more forgiving than `npm ci` if the lockfile drifts at all.
-RUN npm install --no-audit --no-fund
+# `--legacy-peer-deps` skips strict peer-dep resolution (Vite 8 vs Tailwind's
+# declared peer range). Lockfile already pins working versions.
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 COPY frontend/ ./
 RUN npm run build
 
