@@ -272,7 +272,7 @@ export default function Leagues() {
               </div>
               <Link
                 to={selectedLeague.hasMyTeam
-                  ? `/myteam?leagueId=${selectedLeague.id}`
+                  ? `/my-team?leagueId=${selectedLeague.id}`
                   : `/transfers?leagueId=${selectedLeague.id}`}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap"
               >
