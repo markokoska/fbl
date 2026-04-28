@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
-import type { Team, Gameweek, GameweekHistory, Pick } from '../api/types';
+import { LeagueType, type Team, type Gameweek, type GameweekHistory, type Pick } from '../api/types';
 import { useCountdown } from '../hooks/useCountdown';
 import { useLeagueId, leagueQuery } from '../hooks/useLeagueId';
 import PitchView, { type Formation } from '../components/team/PitchView';
@@ -127,6 +127,7 @@ export default function MyTeam() {
         onFormationChange={setFormation}
         onPicksUpdated={(newPicks) => setTeam({ ...team, picks: newPicks })}
         leagueId={leagueId}
+        isDraftTeam={team.leagueType === LeagueType.Draft}
       />
 
       {/* GW History */}

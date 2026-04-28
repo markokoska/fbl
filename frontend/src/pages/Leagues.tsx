@@ -20,6 +20,7 @@ export default function Leagues() {
     userId: string;
     managerName: string;
     teamName: string;
+    leagueId: number | null; // null = global team; set = scoped to that league
     gwNumber: number;       // currently displayed GW
     minGw: number;          // earliest available GW
     maxGw: number;          // latest GW with picks (current GW)
@@ -33,12 +34,14 @@ export default function Leagues() {
 
   useEffect(() => { selectedLeagueRef.current = selectedLeague; }, [selectedLeague]);
 
-  const viewUserTeam = async (userId: string, managerName: string, teamName: string) => {
+  const viewUserTeam = async (userId: string, managerName: string, teamName: string, leagueIdContext: number | null) => {
     try {
-      // Fetch the team for the current/upcoming GW (auto-creates picks if needed),
-      // plus the full GW list so we know the navigation bounds.
+      // For league standings, scope the team fetch to that league so we get
+      // each member's per-league team (especially important for Draft leagues
+      // where members might not have a global team at all).
+      const lq = leagueIdContext == null ? '' : `?leagueId=${leagueIdContext}`;
       const [teamRes, gwsRes, currentGwRes] = await Promise.all([
-        api.get<Team>(`/team/user/${userId}`),
+        api.get<Team>(`/team/user/${userId}${lq}`),
         api.get<GwType[]>('/gameweek'),
         api.get<GwType>('/gameweek/current').catch(() => null),
       ]);
@@ -53,6 +56,7 @@ export default function Leagues() {
         userId,
         managerName,
         teamName,
+        leagueId: leagueIdContext,
         gwNumber: currentNumber,
         minGw: allGws[0]?.number ?? 1,
         maxGw: currentNumber,
@@ -71,7 +75,8 @@ export default function Leagues() {
 
     setViewingTeam({ ...viewingTeam, loading: true });
     try {
-      const res = await api.get<Team>(`/team/user/${viewingTeam.userId}/gameweek/${next}`);
+      const lq = viewingTeam.leagueId == null ? '' : `?leagueId=${viewingTeam.leagueId}`;
+      const res = await api.get<Team>(`/team/user/${viewingTeam.userId}/gameweek/${next}${lq}`);
       setViewingTeam(prev => prev ? { ...prev, gwNumber: next, team: res.data, loading: false } : null);
     } catch {
       setViewingTeam(prev => prev ? { ...prev, loading: false } : null);
@@ -140,6 +145,20 @@ export default function Leagues() {
   const viewLeague = async (id: number) => {
     const res = await api.get<League>(`/league/${id}`);
     setSelectedLeague(res.data);
+  };
+
+  const resetDraft = async (id: number) => {
+    if (!confirm('Reset the draft? This wipes all picks and the auto-created teams. Members stay.')) return;
+    try {
+      await api.post(`/draft/${id}/reset`);
+      setMessage('Draft reset.');
+      // Refresh the league and the leagues list so status flips back to Pending.
+      const res = await api.get<League>(`/league/${id}`);
+      setSelectedLeague(res.data);
+      loadData();
+    } catch (err: any) {
+      setMessage(err.response?.data?.message || 'Reset failed');
+    }
   };
 
   return (
@@ -235,7 +254,7 @@ export default function Leagues() {
       </div>
 
       {tab === 'global' && !selectedLeague && (
-        <StandingsTable standings={globalStandings} title="Global Leaderboard" onViewTeam={viewUserTeam} isLive={isLive} />
+        <StandingsTable standings={globalStandings} title="Global Leaderboard" onViewTeam={viewUserTeam} isLive={isLive} leagueIdContext={null} />
       )}
 
       {tab === 'my' && !selectedLeague && (
@@ -317,18 +336,48 @@ export default function Leagues() {
             </div>
           )}
 
-          {/* CTA: draft leagues — placeholder until draft mode is built */}
+          {/* CTA: draft leagues — different button based on draft state */}
           {selectedLeague.type === LeagueType.Draft && (
-            <div className="bg-slate-800 rounded-xl p-4 mb-4">
-              <p className="text-white text-sm font-medium">Draft League</p>
-              <p className="text-slate-400 text-xs mt-0.5">
-                {selectedLeague.memberCount}/{selectedLeague.maxMembers} managers joined.
-                Live drafting and waivers coming next.
-              </p>
+            <div className="bg-slate-800 rounded-xl p-4 mb-4 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-white text-sm font-medium">
+                  {selectedLeague.draftStatus === 0 && 'Draft hasn\'t started yet'}
+                  {selectedLeague.draftStatus === 1 && 'Draft is in progress!'}
+                  {selectedLeague.draftStatus === 2 && 'Draft completed'}
+                </p>
+                <p className="text-slate-400 text-xs mt-0.5">
+                  {selectedLeague.memberCount}/{selectedLeague.maxMembers} managers joined
+                  {selectedLeague.draftStatus === 0 && ' · Waiting for the league creator to start.'}
+                  {selectedLeague.draftStatus === 1 && ' · Click below to enter the draft room.'}
+                  {selectedLeague.draftStatus === 2 && ' · Manage your drafted squad.'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {/* Creator-only Redraft button when draft is running or finished */}
+                {selectedLeague.isCreator && selectedLeague.draftStatus !== 0 && (
+                  <button
+                    onClick={() => resetDraft(selectedLeague.id)}
+                    className="bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 text-red-300 hover:text-red-200 text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap"
+                    title="Wipes all picks and auto-created teams; restarts the draft"
+                  >
+                    Redraft
+                  </button>
+                )}
+                <Link
+                  to={selectedLeague.draftStatus === 2
+                    ? `/my-team?leagueId=${selectedLeague.id}`
+                    : `/draft/${selectedLeague.id}`}
+                  className="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap"
+                >
+                  {selectedLeague.draftStatus === 0 && 'Enter Lobby'}
+                  {selectedLeague.draftStatus === 1 && 'Enter Draft Room'}
+                  {selectedLeague.draftStatus === 2 && 'Manage Team'}
+                </Link>
+              </div>
             </div>
           )}
 
-          <StandingsTable standings={selectedLeague.standings} title="" onViewTeam={viewUserTeam} isLive={isLive} />
+          <StandingsTable standings={selectedLeague.standings} title="" onViewTeam={viewUserTeam} isLive={isLive} leagueIdContext={selectedLeague.id} />
         </div>
       )}
 
@@ -410,12 +459,14 @@ function LiveBadge() {
 }
 
 function StandingsTable({
-  standings, title, onViewTeam, isLive,
+  standings, title, onViewTeam, isLive, leagueIdContext,
 }: {
   standings: LeagueStanding[];
   title: string;
-  onViewTeam: (userId: string, name: string, teamName: string) => void;
+  onViewTeam: (userId: string, name: string, teamName: string, leagueId: number | null) => void;
   isLive: boolean;
+  /** Pass the current league's id when rendering its standings; null for the global leaderboard. */
+  leagueIdContext: number | null;
 }) {
   return (
     <div className="bg-slate-800 rounded-xl overflow-hidden">
@@ -450,7 +501,7 @@ function StandingsTable({
                 <td className="px-4 py-3 text-right font-semibold text-emerald-400 tabular-nums">{s.totalPoints}</td>
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={() => onViewTeam(s.userId, s.displayName, s.teamName)}
+                    onClick={() => onViewTeam(s.userId, s.displayName, s.teamName, leagueIdContext)}
                     className="text-xs px-3 py-1 rounded font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white transition"
                   >
                     View

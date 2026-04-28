@@ -20,6 +20,7 @@ public record LeagueDto(
     int MaxMembers,
     DraftStatus DraftStatus,
     bool HasMyTeam,
+    bool IsCreator,
     List<LeagueStandingDto> Standings
 );
 

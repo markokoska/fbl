@@ -35,12 +35,14 @@ interface Props {
   readOnly?: boolean;
   /** League context for the team being managed. null = global team. */
   leagueId?: number | null;
+  /** Draft mode hides captain/vice badges + menu options. */
+  isDraftTeam?: boolean;
 }
 
 type Mode = 'idle' | 'swap' | 'menu';
 
-function PlayerCard({ pick, selected, swapTarget, onClick }: {
-  pick: Pick; selected: boolean; swapTarget: boolean; onClick?: () => void;
+function PlayerCard({ pick, selected, swapTarget, onClick, hideCaptainBadge }: {
+  pick: Pick; selected: boolean; swapTarget: boolean; onClick?: () => void; hideCaptainBadge?: boolean;
 }) {
   const isGk = pick.position === PlayerPosition.GK;
   const jersey = getJerseySvg(pick.team, isGk);
@@ -60,10 +62,10 @@ function PlayerCard({ pick, selected, swapTarget, onClick }: {
         <div className="absolute -inset-1 rounded-xl border-2 border-sky-400/60 bg-sky-400/10 z-0" />
       )}
 
-      {pick.isCaptain && (
+      {!hideCaptainBadge && pick.isCaptain && (
         <div className="absolute -top-1 -right-1 z-10 w-5 h-5 rounded-full bg-amber-500 text-black text-[10px] font-bold flex items-center justify-center shadow">C</div>
       )}
-      {pick.isViceCaptain && (
+      {!hideCaptainBadge && pick.isViceCaptain && (
         <div className="absolute -top-1 -right-1 z-10 w-5 h-5 rounded-full bg-slate-400 text-black text-[10px] font-bold flex items-center justify-center shadow">V</div>
       )}
 
@@ -119,7 +121,7 @@ function BenchCard({ pick, selected, swapTarget, onClick }: {
   );
 }
 
-export default function PitchView({ picks, formation, onFormationChange, onPicksUpdated, readOnly, leagueId }: Props) {
+export default function PitchView({ picks, formation, onFormationChange, onPicksUpdated, readOnly, leagueId, isDraftTeam }: Props) {
   const leagueQs = leagueId == null ? '' : `?leagueId=${leagueId}`;
   const [mode, setMode] = useState<Mode>('idle');
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -287,7 +289,7 @@ export default function PitchView({ picks, formation, onFormationChange, onPicks
           >
             Swap
           </button>
-          {isStarter(selectedId) && (
+          {isStarter(selectedId) && !isDraftTeam && (
             <>
               <button
                 onClick={() => setCaptain(selectedId)}
@@ -350,6 +352,7 @@ export default function PitchView({ picks, formation, onFormationChange, onPicks
                     selected={selectedId === p.playerId}
                     swapTarget={mode === 'swap' && selectedId !== p.playerId}
                     onClick={() => handleClick(p.playerId)}
+                    hideCaptainBadge={isDraftTeam}
                   />
                 ))}
               </div>

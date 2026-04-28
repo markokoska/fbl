@@ -153,6 +153,7 @@ export interface League {
   maxMembers: number;
   draftStatus: DraftStatus;
   hasMyTeam: boolean;
+  isCreator: boolean;
   standings: LeagueStanding[];
 }
 
@@ -184,4 +185,62 @@ export interface ChipsAvailable {
   benchBoost: boolean;
   tripleCaptain: boolean;
   freeHit: boolean;
+}
+
+// ---- Draft mode ----
+
+export interface DraftMember {
+  userId: string;
+  displayName: string;
+  orderIndex: number;
+  picksMade: number;
+}
+
+export interface DraftPickEntry {
+  pickNumber: number;
+  round: number;
+  userId: string;
+  displayName: string;
+  playerId: number;
+  playerName: string;
+  playerTeam: string;
+  position: PlayerPosition;
+  wasAutoPick: boolean;
+  pickedAt: string;
+}
+
+export interface DraftState {
+  leagueId: number;
+  leagueName: string;
+  status: DraftStatus;
+  maxMembers: number;
+  totalPicks: number;
+  currentPickNumber: number;
+  currentRound: number;
+  currentPickerUserId: string | null;
+  currentPickerName: string | null;
+  currentPickDeadline: string | null;
+  pickSeconds: number;
+  myTurn: boolean;
+  isCreator: boolean;
+  members: DraftMember[];
+  picks: DraftPickEntry[];
+}
+
+export interface AvailablePlayer {
+  id: number;
+  name: string;
+  team: string;
+  position: PlayerPosition;
+  price: number;
+  totalPoints: number;
+}
+
+export interface PickBroadcast {
+  leagueId: number;
+  pick: DraftPickEntry;
+  nextPickNumber: number;
+  nextPickerUserId: string | null;
+  nextPickDeadline: string | null;
+  status: DraftStatus;
 }

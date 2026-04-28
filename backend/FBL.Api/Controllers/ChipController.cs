@@ -36,6 +36,14 @@ public class ChipController : ControllerBase
         var team = await ResolveTeam(leagueId, includeChips: true);
         if (team == null) return NotFound();
 
+        // Draft leagues don't have chips — all four are flagged unavailable.
+        if (team.LeagueId != null)
+        {
+            var leagueCheck = await _db.Leagues.FindAsync(team.LeagueId.Value);
+            if (leagueCheck?.Type == LeagueType.Draft)
+                return Ok(new { Wildcard = false, BenchBoost = false, TripleCaptain = false, FreeHit = false });
+        }
+
         var usedChips = team.ChipUsages.Select(c => c.ChipType).ToList();
 
         var wildcardCount = usedChips.Count(c => c == ChipType.Wildcard);
@@ -63,6 +71,14 @@ public class ChipController : ControllerBase
 
         var team = await ResolveTeam(leagueId, includeChips: true);
         if (team == null) return NotFound();
+
+        // Chips are a Classic-mode mechanic; Draft leagues don't use them.
+        if (team.LeagueId != null)
+        {
+            var league = await _db.Leagues.FindAsync(team.LeagueId.Value);
+            if (league?.Type == LeagueType.Draft)
+                return BadRequest("Draft leagues don't use chips.");
+        }
 
         if (team.ChipUsages.Any(c => c.GameweekId == currentGw.Id))
             return BadRequest("You've already activated a chip this gameweek.");

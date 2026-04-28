@@ -189,6 +189,17 @@ public class TeamController : ControllerBase
         var team = await ResolveTeam(UserId, leagueId);
         if (team == null) return NotFound("Team not found.");
 
+        // Draft teams don't have captains.
+        bool isDraftTeam = false;
+        if (team.LeagueId != null)
+        {
+            var leagueType = await _db.Leagues
+                .Where(l => l.Id == team.LeagueId.Value)
+                .Select(l => l.Type)
+                .FirstOrDefaultAsync();
+            isDraftTeam = leagueType == Models.LeagueType.Draft;
+        }
+
         await EnsurePicksForGameweek(team.Id, currentGw.Id);
 
         var picks = await _db.FantasyPicks
@@ -204,8 +215,9 @@ public class TeamController : ControllerBase
             if (update == null) return BadRequest($"Player {pick.PlayerId} not found in update.");
 
             pick.SquadPosition = update.SquadPosition;
-            pick.IsCaptain = update.IsCaptain;
-            pick.IsViceCaptain = update.IsViceCaptain;
+            // Force captain/vice off for draft teams; otherwise honour the request.
+            pick.IsCaptain = isDraftTeam ? false : update.IsCaptain;
+            pick.IsViceCaptain = isDraftTeam ? false : update.IsViceCaptain;
         }
 
         await _db.SaveChangesAsync();

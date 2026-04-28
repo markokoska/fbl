@@ -64,6 +64,7 @@ public class LeagueController : ControllerBase
             m.League.MaxMembers,
             m.League.DraftStatus,
             myLeagueTeamSet.Contains(m.League.Id),
+            m.League.CreatedByUserId == UserId,
             new List<LeagueStandingDto>()
         )).ToList();
     }
@@ -85,7 +86,7 @@ public class LeagueController : ControllerBase
         return new LeagueDto(
             league.Id, league.Name, league.JoinCode, league.IsGlobal,
             league.Type, memberCount, league.MaxMembers, league.DraftStatus,
-            hasMyTeam, standings
+            hasMyTeam, league.CreatedByUserId == UserId, standings
         );
     }
 
@@ -125,7 +126,7 @@ public class LeagueController : ControllerBase
             new LeagueDto(
                 league.Id, league.Name, league.JoinCode, false,
                 league.Type, 1, league.MaxMembers, league.DraftStatus,
-                false, new List<LeagueStandingDto>()
+                false, true, new List<LeagueStandingDto>()
             ));
     }
 

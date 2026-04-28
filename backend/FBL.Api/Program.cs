@@ -63,7 +63,8 @@ builder.Services.AddAuthentication(options =>
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/livescore"))
+            if (!string.IsNullOrEmpty(accessToken)
+                && (path.StartsWithSegments("/hubs/livescore") || path.StartsWithSegments("/hubs/draft")))
             {
                 context.Token = accessToken;
             }
@@ -92,6 +93,8 @@ builder.Services.AddScoped<LeaderboardService>();
 builder.Services.AddScoped<DataImportService>();
 builder.Services.AddScoped<OpenLigaImportService>();
 builder.Services.AddScoped<GameweekSimulationService>();
+builder.Services.AddScoped<DraftService>();
+builder.Services.AddHostedService<DraftAutoPickService>();
 builder.Services.AddHttpClient("FootballData");
 builder.Services.AddHttpClient();
 
@@ -135,6 +138,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<LiveScoreHub>("/hubs/livescore");
+app.MapHub<DraftHub>("/hubs/draft");
 
 // SPA fallback: any unmatched route returns index.html so React Router works
 app.MapFallbackToFile("index.html");
