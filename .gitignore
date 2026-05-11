@@ -24,7 +24,7 @@ Thumbs.db
 # MS Office lock files (created when a doc is open in Word/Excel)
 ~$*
 
-# Claude Code local tooling (AI assistant config — install separately)
+# Local editor / IDE tooling
 .claude/
 
 # Local DB dumps (may contain credentials/data — keep local)
