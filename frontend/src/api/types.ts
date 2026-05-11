@@ -244,3 +244,60 @@ export interface PickBroadcast {
   nextPickDeadline: string | null;
   status: DraftStatus;
 }
+
+// ---- Waivers ----
+
+export const WaiverPhase = {
+  Queue: 0,
+  FreeAgency: 1,
+  Locked: 2,
+  NoDraftYet: 3,
+} as const;
+export type WaiverPhase = (typeof WaiverPhase)[keyof typeof WaiverPhase];
+
+export const WaiverClaimStatus = {
+  Pending: 0,
+  Succeeded: 1,
+  Failed: 2,
+} as const;
+export type WaiverClaimStatus = (typeof WaiverClaimStatus)[keyof typeof WaiverClaimStatus];
+
+export interface WaiverClaim {
+  id: number;
+  playerOutId: number;
+  playerOutName: string;
+  playerOutTeam: string;
+  playerOutPosition: PlayerPosition;
+  playerInId: number;
+  playerInName: string;
+  playerInTeam: string;
+  playerInPosition: PlayerPosition;
+  priority: number;
+  status: WaiverClaimStatus;
+  failureReason: string | null;
+  createdAt: string;
+  processedAt: string | null;
+}
+
+export interface WaiverState {
+  leagueId: number;
+  leagueName: string;
+  phase: WaiverPhase;
+  upcomingGameweekNumber: number | null;
+  upcomingDeadline: string | null;
+  processAt: string | null;
+  isLocked: boolean;
+  myClaims: WaiverClaim[];
+  recentResolved: WaiverClaim[];
+}
+
+export interface FreeAgent {
+  id: number;
+  name: string;
+  team: string;
+  position: PlayerPosition;
+  price: number;
+  totalPoints: number;
+  isLocked: boolean;
+  droppedByName: string | null;
+}

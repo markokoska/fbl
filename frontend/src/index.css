@@ -1,12 +1,75 @@
 @import "tailwindcss";
 
+/* ---- Theme tokens (Tailwind v4 @theme exposes these as utilities) ---- */
+@theme {
+  /* Custom font families. Tailwind exposes them as font-sans / font-display. */
+  --font-sans: "Chakra Petch", system-ui, -apple-system, sans-serif;
+  --font-display: "Russo One", "Chakra Petch", system-ui, sans-serif;
+
+  /* Brand emerald glow used on key score numbers and CTAs. */
+  --color-glow: rgba(34, 197, 94, 0.5);
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-family: var(--font-sans);
+  background: #020617;
+  color: #f1f5f9;
+  font-feature-settings: "tnum" 1;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* ---- Reusable utility classes ---- */
+
+/* Big number glow — for GW points, total points, draft timer, league standings. */
+.text-glow-emerald {
+  text-shadow: 0 0 16px rgba(34, 197, 94, 0.45),
+    0 0 32px rgba(34, 197, 94, 0.2);
+}
+
+.text-glow-amber {
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.45),
+    0 0 32px rgba(251, 191, 36, 0.2);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 14px rgba(239, 68, 68, 0.5),
+    0 0 28px rgba(239, 68, 68, 0.25);
+}
+
+/* Section heading — display font + slight letter spacing. */
+.heading-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Card with subtle inner glow on the top border — used for premium elements. */
+.card-glow {
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Pulse ring for "your turn" / "live" indicators. */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+.pulse-ring {
+  animation: pulse-ring 1.5s infinite;
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring,
+  .animate-pulse,
+  .animate-ping {
+    animation: none !important;
+  }
 }

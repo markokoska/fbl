@@ -1,0 +1,53 @@
+flowchart TB
+    subgraph Browser["🌐 Browser (Client)"]
+        SPA["React 19 + TypeScript SPA<br/>Tailwind CSS · Vite build<br/>react-router · axios · @microsoft/signalr"]
+    end
+
+    subgraph Render["☁️ Render Cloud Platform"]
+        subgraph Container["🐳 Docker Container (single image)"]
+            subgraph Backend["ASP.NET Core 8 (.NET 8)"]
+                Controllers["REST Controllers<br/>Auth · Team · Transfer · League<br/>Chip · Draft · Waiver · Admin"]
+                Hubs["SignalR Hubs<br/>LiveScoreHub · DraftHub"]
+                Services["Services Layer<br/>DraftService · WaiverService<br/>LeaderboardService · ScoringService<br/>TransferService · TokenService"]
+                BgServices["Background Workers (IHostedService)<br/>DraftAutoPickService — auto-pick on timeout<br/>WaiverProcessingService — 24h before deadline"]
+                Static["Static Files Middleware<br/>(serves wwwroot — built React SPA)"]
+                EFCore["Entity Framework Core<br/>auto-migrate on startup"]
+            end
+        end
+
+        DB[("🗄️ PostgreSQL<br/>Render-managed<br/>14 tables")]
+    end
+
+    subgraph CI["⚙️ CI/CD"]
+        GitHub["GitHub repository<br/>main branch"]
+        AutoBuild["Render auto-deploy<br/>on push (~3-5 min)"]
+    end
+
+    %% Flow
+    SPA -- "HTTPS REST API<br/>(/api/*)" --> Controllers
+    SPA -. "WebSocket<br/>(/hubs/*)" .-> Hubs
+    Static -- "serves SPA<br/>(/, /my-team, etc.)" --> SPA
+
+    Controllers --> Services
+    Hubs --> Services
+    BgServices --> Services
+    Services --> EFCore
+    EFCore <--> DB
+
+    GitHub -- "git push origin main" --> AutoBuild
+    AutoBuild -- "rebuilds + redeploys" --> Container
+
+    %% Styling
+    classDef client fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    classDef backend fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef workers fill:#fef3c7,stroke:#a16207,color:#713f12
+    classDef db fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef ci fill:#ede9fe,stroke:#6d28d9,color:#4c1d95
+    classDef container fill:#f1f5f9,stroke:#475569,color:#1e293b
+
+    class SPA client
+    class Controllers,Hubs,Services,Static,EFCore backend
+    class BgServices workers
+    class DB db
+    class GitHub,AutoBuild ci
+    class Container,Backend container

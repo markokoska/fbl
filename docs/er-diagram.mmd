@@ -1,0 +1,161 @@
+erDiagram
+    AppUser ||--o{ FantasyTeam : owns
+    AppUser ||--o{ LeagueMember : "member of"
+    AppUser ||--o{ League : creates
+    AppUser ||--o{ DraftPick : "drafts as"
+    AppUser ||--o{ WaiverClaim : submits
+    AppUser ||--o{ DroppedPlayer : drops
+
+    League ||--o{ LeagueMember : has
+    League |o--o{ FantasyTeam : scopes
+    League ||--o{ DraftPick : contains
+    League ||--o{ WaiverClaim : contains
+    League ||--o{ DroppedPlayer : tracks
+
+    FantasyTeam ||--o{ FantasyPick : has
+    FantasyTeam ||--o{ Transfer : history
+    FantasyTeam ||--o{ ChipUsage : activates
+
+    BundesligaPlayer ||--o{ FantasyPick : "picked as"
+    BundesligaPlayer ||--o{ MatchEvent : "involved in"
+    BundesligaPlayer ||--o{ DraftPick : "drafted as"
+    BundesligaPlayer ||--o{ WaiverClaim : "in or out"
+    BundesligaPlayer ||--o{ DroppedPlayer : dropped
+    BundesligaPlayer ||--o{ Transfer : "in or out"
+
+    Gameweek ||--o{ FantasyPick : "valid for"
+    Gameweek ||--o{ Match : contains
+    Gameweek ||--o{ MatchEvent : "occurs in"
+    Gameweek ||--o{ WaiverClaim : "applies to"
+    Gameweek ||--o{ DroppedPlayer : "applies to"
+    Gameweek ||--o{ Transfer : "made for"
+    Gameweek ||--o{ ChipUsage : "activated for"
+
+    AppUser {
+        string Id PK
+        string DisplayName
+        string Email UK
+        string PasswordHash
+    }
+
+    BundesligaPlayer {
+        int Id PK
+        string Name
+        string Team
+        int Position "GK_DEF_MID_FWD"
+        decimal Price
+        int TotalPoints
+    }
+
+    Gameweek {
+        int Id PK
+        int Number UK
+        DateTime KickoffTime
+        int Status "Upcoming_Live_Finished"
+    }
+
+    League {
+        int Id PK
+        string Name
+        string JoinCode UK
+        string CreatedByUserId FK
+        int Type "Global_Classic_Draft"
+        int MaxMembers
+        int DraftStatus
+        DateTime CurrentPickDeadline "nullable"
+        int LastWaiverProcessedGameweekId "nullable"
+    }
+
+    LeagueMember {
+        int Id PK
+        int LeagueId FK
+        string UserId FK
+        DateTime JoinedAt
+    }
+
+    FantasyTeam {
+        int Id PK
+        string UserId FK
+        int LeagueId FK "nullable - global if NULL"
+        string Name
+        decimal Budget
+        int FreeTransfers
+        int TotalPoints
+        int GameweekPoints
+    }
+
+    FantasyPick {
+        int Id PK
+        int FantasyTeamId FK
+        int PlayerId FK
+        int GameweekId FK
+        int SquadPosition "1 to 15"
+        bool IsCaptain
+        bool IsViceCaptain
+    }
+
+    Match {
+        int Id PK
+        int GameweekId FK
+        string HomeTeam
+        string AwayTeam
+        int HomeGoals
+        int AwayGoals
+        bool IsFinished
+    }
+
+    MatchEvent {
+        int Id PK
+        int GameweekId FK
+        int PlayerId FK
+        int EventType
+        int Minute "nullable"
+        int Points
+    }
+
+    Transfer {
+        int Id PK
+        int FantasyTeamId FK
+        int GameweekId FK
+        int PlayerInId FK
+        int PlayerOutId FK
+        decimal PriceIn
+        decimal PriceOut
+        bool IsFreeTransfer
+    }
+
+    ChipUsage {
+        int Id PK
+        int FantasyTeamId FK
+        int GameweekId FK
+        int ChipType "Wildcard_BenchBoost_TripleCaptain_FreeHit"
+    }
+
+    DraftPick {
+        int Id PK
+        int LeagueId FK
+        string UserId FK
+        int PlayerId FK
+        int Round
+        int PickNumber
+        bool WasAutoPick
+    }
+
+    WaiverClaim {
+        int Id PK
+        int LeagueId FK
+        string UserId FK
+        int GameweekId FK
+        int PlayerOutId FK
+        int PlayerInId FK
+        int Priority
+        int Status "Pending_Succeeded_Failed"
+    }
+
+    DroppedPlayer {
+        int Id PK
+        int LeagueId FK
+        int PlayerId FK
+        int GameweekId FK
+        string DroppedByUserId FK
+    }

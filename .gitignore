@@ -20,3 +20,17 @@ appsettings.Development.json
 # OS
 .DS_Store
 Thumbs.db
+
+# MS Office lock files (created when a doc is open in Word/Excel)
+~$*
+
+# Claude Code local tooling (AI assistant config — install separately)
+.claude/
+
+# Local DB dumps (may contain credentials/data — keep local)
+seed.sql
+seed-matches.sql
+
+# One-off helper scripts and reference materials
+extract_pdf.py
+thesis_example_*.txt

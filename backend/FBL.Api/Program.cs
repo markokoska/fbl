@@ -94,7 +94,9 @@ builder.Services.AddScoped<DataImportService>();
 builder.Services.AddScoped<OpenLigaImportService>();
 builder.Services.AddScoped<GameweekSimulationService>();
 builder.Services.AddScoped<DraftService>();
+builder.Services.AddScoped<WaiverService>();
 builder.Services.AddHostedService<DraftAutoPickService>();
+builder.Services.AddHostedService<WaiverProcessingService>();
 builder.Services.AddHttpClient("FootballData");
 builder.Services.AddHttpClient();
 

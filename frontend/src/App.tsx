@@ -14,6 +14,7 @@ import Standings from './pages/Standings';
 import Stats from './pages/Stats';
 import Injuries from './pages/Injuries';
 import Draft from './pages/Draft';
+import Waivers from './pages/Waivers';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ function AppRoutes() {
       <Route path="/transfers" element={<ProtectedRoute><Transfers /></ProtectedRoute>} />
       <Route path="/leagues" element={<ProtectedRoute><Leagues /></ProtectedRoute>} />
       <Route path="/draft/:leagueId" element={<ProtectedRoute><Draft /></ProtectedRoute>} />
+      <Route path="/waivers/:leagueId" element={<ProtectedRoute><Waivers /></ProtectedRoute>} />
       <Route path="/gameweek" element={<ProtectedRoute><GameweekPage /></ProtectedRoute>} />
       <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
       <Route path="/standings" element={<ProtectedRoute><Standings /></ProtectedRoute>} />

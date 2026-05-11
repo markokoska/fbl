@@ -20,6 +20,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<DraftPick> DraftPicks => Set<DraftPick>();
     public DbSet<WaiverClaim> WaiverClaims => Set<WaiverClaim>();
+    public DbSet<DroppedPlayer> DroppedPlayers => Set<DroppedPlayer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -173,5 +174,30 @@ public class AppDbContext : IdentityDbContext<AppUser>
         // Index for fast queue lookups.
         builder.Entity<WaiverClaim>()
             .HasIndex(c => new { c.LeagueId, c.GameweekId, c.UserId, c.Priority });
+
+        // ---- DroppedPlayer ----
+        builder.Entity<DroppedPlayer>()
+            .HasOne(d => d.League)
+            .WithMany()
+            .HasForeignKey(d => d.LeagueId);
+
+        builder.Entity<DroppedPlayer>()
+            .HasOne(d => d.Player)
+            .WithMany()
+            .HasForeignKey(d => d.PlayerId);
+
+        builder.Entity<DroppedPlayer>()
+            .HasOne(d => d.Gameweek)
+            .WithMany()
+            .HasForeignKey(d => d.GameweekId);
+
+        builder.Entity<DroppedPlayer>()
+            .HasOne(d => d.DroppedBy)
+            .WithMany()
+            .HasForeignKey(d => d.DroppedByUserId);
+
+        // Lookup hot path: "is player X locked in league Y for GW Z?"
+        builder.Entity<DroppedPlayer>()
+            .HasIndex(d => new { d.LeagueId, d.GameweekId, d.PlayerId });
     }
 }

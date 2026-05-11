@@ -80,8 +80,16 @@ export default function MyTeam() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Team selector — only renders if user has multiple teams */}
-      <div className="flex justify-end mb-3">
+      {/* Team selector + waivers link (draft teams only) */}
+      <div className="flex justify-end items-center gap-3 mb-3">
+        {team.leagueType === LeagueType.Draft && team.leagueId != null && (
+          <Link
+            to={`/waivers/${team.leagueId}`}
+            className="text-xs px-3 py-1.5 rounded font-semibold bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition"
+          >
+            Waivers &rsaquo;
+          </Link>
+        )}
         <TeamSelector current={leagueId} />
       </div>
 

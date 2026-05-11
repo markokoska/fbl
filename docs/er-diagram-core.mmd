@@ -1,0 +1,124 @@
+erDiagram
+    AppUser ||--o{ FantasyTeam : owns
+    AppUser ||--o{ LeagueMember : "member of"
+    AppUser ||--o{ DraftPick : drafts
+
+    League ||--o{ LeagueMember : has
+    League |o--o{ FantasyTeam : "scopes (optional)"
+    League ||--o{ DraftPick : "snake order"
+    League ||--o{ WaiverClaim : "waiver queue"
+
+    FantasyTeam ||--o{ FantasyPick : "15 per gameweek"
+    FantasyTeam ||--o{ Transfer : history
+    FantasyTeam ||--o{ ChipUsage : chips
+
+    BundesligaPlayer ||--o{ FantasyPick : "picked as"
+    BundesligaPlayer ||--o{ MatchEvent : "scores points"
+    BundesligaPlayer ||--o{ DraftPick : "drafted as"
+
+    Gameweek ||--o{ FantasyPick : "valid for"
+    Gameweek ||--o{ MatchEvent : "occurs in"
+    Gameweek ||--o{ Match : contains
+
+    AppUser {
+        string Id PK
+        string DisplayName
+        string Email UK
+    }
+
+    BundesligaPlayer {
+        int Id PK
+        string Name
+        string Team
+        int Position
+        decimal Price
+        int TotalPoints
+    }
+
+    Gameweek {
+        int Id PK
+        int Number UK
+        DateTime KickoffTime
+        int Status
+    }
+
+    League {
+        int Id PK
+        string Name
+        string JoinCode UK
+        int Type "Global_Classic_Draft"
+        int DraftStatus
+    }
+
+    LeagueMember {
+        int Id PK
+        int LeagueId FK
+        string UserId FK
+    }
+
+    FantasyTeam {
+        int Id PK
+        string UserId FK
+        int LeagueId FK "nullable"
+        string Name
+        decimal Budget
+        int TotalPoints
+    }
+
+    FantasyPick {
+        int Id PK
+        int FantasyTeamId FK
+        int PlayerId FK
+        int GameweekId FK
+        int SquadPosition
+        bool IsCaptain
+    }
+
+    Match {
+        int Id PK
+        int GameweekId FK
+        string HomeTeam
+        string AwayTeam
+        int HomeGoals
+        int AwayGoals
+    }
+
+    MatchEvent {
+        int Id PK
+        int GameweekId FK
+        int PlayerId FK
+        int EventType
+        int Points
+    }
+
+    Transfer {
+        int Id PK
+        int FantasyTeamId FK
+        int PlayerInId FK
+        int PlayerOutId FK
+    }
+
+    ChipUsage {
+        int Id PK
+        int FantasyTeamId FK
+        int GameweekId FK
+        int ChipType
+    }
+
+    DraftPick {
+        int Id PK
+        int LeagueId FK
+        string UserId FK
+        int PlayerId FK
+        int PickNumber
+    }
+
+    WaiverClaim {
+        int Id PK
+        int LeagueId FK
+        string UserId FK
+        int PlayerOutId FK
+        int PlayerInId FK
+        int Priority
+        int Status
+    }
